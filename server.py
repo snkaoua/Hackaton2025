@@ -8,12 +8,13 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List, Optional
 
+
 from model import User, UserCreate, UserResponse, get_db
 app = FastAPI()
 
 @app.post("/users", response_model=UserResponse)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
-    db_user = User(name=user.name, email=user.email, id=user.id)
+    db_user = User(name=user.name, email=user.email, user_id=user.user_id)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -101,3 +102,48 @@ async def download_file(filename: str):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(path=file_location, filename=filename)
 
+
+# ────────────────────────── Pydantic schema ───────────────────────
+class SensorStatus(BaseModel):
+    heart_rate: bool
+    accelerometer: bool
+    skin_temp: bool
+    ambient_temp: bool
+    eda: bool
+
+
+class SensorReadingCreate(BaseModel):
+    # מזהים
+    user_id: str
+    device_id: str
+    timestamp: datetime
+
+heart_rate: Optional[int]          = None
+    heart_rate_bpm: Optional[int]      = Field(None, alias="heart_rate_bpm")
+    hrv_ms: Optional[float]            = None
+    acceleration: Optional[float]      = None
+    skin_temp_c: Optional[float]       = None
+    ambient_temp_c: Optional[float]    = None
+    spo2_percent: Optional[float]      = None
+    eda_microsiemens: Optional[float]  = None
+
+    # אינדיקטורים
+    hr_baseline: Optional[int]         = None
+    hr_spike_rate: Optional[float]     = None
+    hrv_drop_percent: Optional[float]  = None
+    rage_probability: Optional[float]  = None
+
+    alert_level: Optional[str]         = None
+    stress_level: Optional[str]        = None
+
+    sensor_status: Optional[SensorStatus] = None
+
+    class Config:
+        populate_by_name = True        # מכבד alias (heart_rate_bpm)
+
+
+class SensorReadingResponse(SensorReadingCreate):
+    id: int
+
+    class Config:
+        from_attributes = True
