@@ -10,6 +10,9 @@ pipwin install pyaudio      # Windows בלבד ל-SpeechRecognition
 import asyncio, base64, json, os, logging, tempfile
 from typing import Dict, Any
 
+from fastapi import UploadFile, File, HTTPException
+import tempfile, base64, os
+
 import websockets                             # משמש רק עם OpenAI-Key
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -138,6 +141,14 @@ class Proxy:
                 await client.send_json({"type":"error","error":e.get("error",{})})
 
 proxy = Proxy()
+
+proxy = Proxy()
+
+
+@app.websocket("/v1/realtime")
+async def realtime(ws: WebSocket):
+    await proxy.websocket_proxy(ws)
+
 
 @app.websocket("/v1/realtime")
 async def realtime(ws: WebSocket): await proxy.websocket_proxy(ws)

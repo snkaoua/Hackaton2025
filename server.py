@@ -10,9 +10,18 @@ from typing import List, Optional
 from datetime import datetime
 from sqlalchemy.orm import sessionmaker, Session
 from model import *
-
+from tamar import router as tamar_route
 from model import User, UserCreate, UserResponse, get_db
+
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods
+    allow_headers=["*"],  # Allow all headers
+)
+app.include_router(tamar_route, tags=["events"])
 
 @app.post("/users", response_model=UserResponse)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
