@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List, Optional
-from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy import create_engine, Column, Integer, String, Float, JSON, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Float, JSON, DateTime
@@ -84,3 +84,30 @@ class SensorReading(Base):
     sensor_status = Column(JSON, nullable=True)
 
 Base.metadata.create_all(bind=engine)
+
+class BiometricData(Base):
+    __tablename__ = "biometric_data"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer)
+    heart_rate = Column(Float)
+    hrv = Column(Float)
+    skin_temp = Column(Float)
+    movement = Column(String)
+    spo2 = Column(Float)
+    eda = Column(Float)
+    env_temp = Column(Float)
+
+Base.metadata.create_all(bind=engine)
+
+class BiometricInput(BaseModel):
+    heart_rate: float
+    hrv: float
+    skin_temp: float
+    movement: str
+    spo2: float
+    eda: float
+    env_temp: float
+
+class BiometricResponse(BaseModel):
+    state: str

@@ -9,10 +9,55 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 from sqlalchemy.orm import sessionmaker, Session
+from model import BiometricInput, BiometricResponse
+from fastapi import Depends
+from sqlalchemy.orm import Session
 from model import *
 
 from model import User, UserCreate, UserResponse, get_db
 app = FastAPI()
+
+def detect_state(data: BiometricInput) -> str:
+    hr = data.heart_rate
+    hrv = data.hrv
+    temp = data.skin_temp
+    move = data.movement.lower()
+    spo2 = data.spo2
+    eda = data.eda
+    env = data.env_temp
+
+    if 100 <= hr <= 130 and 10 <= hrv <= 35 and 31.5 <= temp <= 32.5 and "tremor" in move and 90 <= spo2 <= 96 and 8 <= eda <= 14:
+        return "😰 Anxiety Attack"
+    elif 95 <= hr <= 140 and 15 <= hrv <= 40 and eda >= 10 and "sharp" in move:
+        return "😡 Rage Attack"
+    elif 55 <= hr <= 75 and 50 <= hrv <= 80 and 32.5 <= temp <= 34.5 and (
+            "zero" in move or "gentle" in move) and spo2 > 96 and 1 <= eda <= 4:
+        return "😌 Rest"
+    elif 100 <= hr <= 170 and 30 <= hrv <= 50 and "strong" in move and eda >= 6:
+        return "🏃‍♀️ Physical Activity"
+    elif 85 <= hr <= 160 and 20 <= hrv <= 40 and "jumps" in move and 5 <= eda <= 10:
+        return "💓 Sexual Activity"
+    elif 85 <= hr <= 110 and 40 <= hrv <= 65 and 4 <= eda <= 7 and "tremor" in move:
+        return "😍 Emotional Excitement"
+    elif 70 <= hr <= 100 and 20 <= hrv <= 40 and temp < 32 and "freeze" in move:
+        return "🥶 Frozen Fear"
+    elif 45 <= hr <= 65 and 50 <= hrv <= 80 and 33 <= temp <= 34.5 and eda <= 3 and "zero" in move:
+        return "💤 Deep Sleep"
+    elif 80 <= hr <= 100 and 30 <= hrv <= 50 and 3 <= eda <= 6:
+        return "🧠 Cognitive Load"
+    elif 60 <= hr <= 85 and 40 <= hrv <= 60 and 2 <= eda <= 5:
+        return "📺 Binge/Screen Time"
+    elif 65 <= hr <= 90 and 25 <= hrv <= 45 and 2 <= eda <= 4:
+        return "🧍‍♀️ Loneliness"
+    elif temp > 35.5 and 5 <= eda <= 9:
+        return "🥵 Fever/Infection"
+    elif 90 <= hr <= 120 and hrv < 40 and spo2 < 93:
+        return "🫁 Shortness of Breath"
+    elif 60 <= hr <= 75 and 30 <= hrv <= 50 and 2 <= eda <= 4:
+        return "😴 Fatigue"
+    else:
+        return "🤷‍♂️ Unknown State"
+
 
 @app.post("/users", response_model=UserResponse)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
@@ -180,3 +225,9 @@ def get_reading(reading_id: int, db: Session = Depends(get_db)):
 @app.get("/")
 def health():
     return {"status": "ok"}
+
+
+@app.post("/biometric/state", response_model=BiometricResponse)
+def get_state(data: BiometricInput, db: Session = Depends(get_db)):
+    state = detect_state(data)
+    return {"state": state}
