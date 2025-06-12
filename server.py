@@ -26,37 +26,65 @@ def detect_state(data: BiometricInput) -> str:
     eda = data.eda
     env = data.env_temp
 
-    if 100 <= hr <= 130 and 10 <= hrv <= 35 and 31.5 <= temp <= 32.5 and "tremor" in move and 90 <= spo2 <= 96 and 8 <= eda <= 14:
-        return "😰 Anxiety Attack"
-    elif 95 <= hr <= 140 and 15 <= hrv <= 40 and eda >= 10 and "sharp" in move:
-        return "😡 Rage Attack"
-    elif 55 <= hr <= 75 and 50 <= hrv <= 80 and 32.5 <= temp <= 34.5 and (
-            "zero" in move or "gentle" in move) and spo2 > 96 and 1 <= eda <= 4:
+    # 😌 מנוחה
+    if 55 <= hr <= 75 and 50 <= hrv <= 80 and 32.5 <= temp <= 34.5 and ("zero" in move or "gentle" in move) and spo2 > 96 and 1 <= eda <= 4 and 20 <= env <= 28:
         return "😌 Rest"
-    elif 100 <= hr <= 170 and 30 <= hrv <= 50 and "strong" in move and eda >= 6:
+
+    # 🏃‍♀️ פעילות גופנית
+    elif 100 <= hr <= 170 and 30 <= hrv <= 50 and 0.5 <= (temp - 32) <= 1 and "strong" in move and spo2 > 95 and 6 <= eda <= 12 and 20 <= env <= 35:
         return "🏃‍♀️ Physical Activity"
-    elif 85 <= hr <= 160 and 20 <= hrv <= 40 and "jumps" in move and 5 <= eda <= 10:
+
+    # 💓 פעילות מינית
+    elif 85 <= hr <= 160 and 20 <= hrv <= 40 and 0.5 <= (temp - 32) <= 1.2 and "jumps" in move and 94 <= spo2 <= 99 and 5 <= eda <= 10 and 20 <= env <= 28:
         return "💓 Sexual Activity"
-    elif 85 <= hr <= 110 and 40 <= hrv <= 65 and 4 <= eda <= 7 and "tremor" in move:
+
+    # 😰 התקף חרדה
+    elif 100 <= hr <= 130 and 10 <= hrv <= 35 and 31.5 <= temp <= 32.5 and ("tremor" in move or "sharp" in move) and 90 <= spo2 <= 96 and 8 <= eda <= 14 and 20 <= env <= 28:
+        return "😰 Anxiety Attack"
+
+    # 😡 התקף זעם
+    elif 95 <= hr <= 140 and 15 <= hrv <= 40 and (temp < 31.5 or temp > 32.5) and "sharp" in move and spo2 > 94 and 10 <= eda <= 16 and 20 <= env <= 28:
+        return "😡 Rage Attack"
+
+    # 😍 התרגשות רגשית
+    elif 85 <= hr <= 110 and 40 <= hrv <= 65 and 0.3 <= (temp - 32) <= 0.6 and "tremor" in move and spo2 >= 96 and 4 <= eda <= 7 and 20 <= env <= 28:
         return "😍 Emotional Excitement"
-    elif 70 <= hr <= 100 and 20 <= hrv <= 40 and temp < 32 and "freeze" in move:
+
+    # 🥶 פחד קפוא
+    elif 70 <= hr <= 100 and 20 <= hrv <= 40 and 31 <= temp <= 32 and ("freeze" in move or "little movement" in move) and spo2 > 95 and 1 <= eda <= 4 and env < 20:
         return "🥶 Frozen Fear"
-    elif 45 <= hr <= 65 and 50 <= hrv <= 80 and 33 <= temp <= 34.5 and eda <= 3 and "zero" in move:
+
+    # 💤 שינה עמוקה
+    elif 45 <= hr <= 65 and 50 <= hrv <= 80 and 33 <= temp <= 34.5 and ("zero" in move or "minimal" in move) and spo2 > 96 and 1 <= eda <= 3 and 18 <= env <= 25:
         return "💤 Deep Sleep"
-    elif 80 <= hr <= 100 and 30 <= hrv <= 50 and 3 <= eda <= 6:
+
+    # 🧠 עומס קוגניטיבי
+    elif 80 <= hr <= 100 and 30 <= hrv <= 50 and 3 <= eda <= 6 and "minimal" in move and spo2 >= 96 and 22 <= env <= 28:
         return "🧠 Cognitive Load"
-    elif 60 <= hr <= 85 and 40 <= hrv <= 60 and 2 <= eda <= 5:
+
+    # 📺 בינג'/מסך
+    elif 60 <= hr <= 85 and 40 <= hrv <= 60 and temp > 32 and "zero" in move and spo2 >= 96 and 2 <= eda <= 5 and 22 <= env <= 28:
         return "📺 Binge/Screen Time"
-    elif 65 <= hr <= 90 and 25 <= hrv <= 45 and 2 <= eda <= 4:
+
+    # 🧍‍♀️ בדידות
+    elif 65 <= hr <= 90 and 25 <= hrv <= 45 and "minimal" in move and spo2 >= 96 and 2 <= eda <= 4 and 20 <= env <= 28:
         return "🧍‍♀️ Loneliness"
-    elif temp > 35.5 and 5 <= eda <= 9:
+
+    # 🥵 חום/זיהום
+    elif temp > 35.5 and 5 <= eda <= 9 and 20 <= env <= 28:
         return "🥵 Fever/Infection"
-    elif 90 <= hr <= 120 and hrv < 40 and spo2 < 93:
+
+    # 🫁 קוצר נשימה
+    elif 90 <= hr <= 120 and hrv < 40 and spo2 < 93 and ("flat breaths" in move or "shallow" in move) and 4 <= eda <= 8 and 20 <= env <= 28:
         return "🫁 Shortness of Breath"
-    elif 60 <= hr <= 75 and 30 <= hrv <= 50 and 2 <= eda <= 4:
+
+    # 😴 עייפות
+    elif 60 <= hr <= 75 and 30 <= hrv <= 50 and (temp > 32 or temp == 32) and ("low movement" in move or "minimal" in move) and 2 <= eda <= 4 and 20 <= env <= 28:
         return "😴 Fatigue"
+
     else:
         return "🤷‍♂️ Unknown State"
+
 
 
 @app.post("/users", response_model=UserResponse)
