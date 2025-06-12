@@ -7,7 +7,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List, Optional
-
+from datetime import datetime
+from sqlalchemy.orm import sessionmaker, Session
+from model import *
 
 from model import User, UserCreate, UserResponse, get_db
 app = FastAPI()
@@ -118,7 +120,7 @@ class SensorReadingCreate(BaseModel):
     device_id: str
     timestamp: datetime
 
-heart_rate: Optional[int]          = None
+    heart_rate: Optional[int]          = None
     heart_rate_bpm: Optional[int]      = Field(None, alias="heart_rate_bpm")
     hrv_ms: Optional[float]            = None
     acceleration: Optional[float]      = None
@@ -147,3 +149,34 @@ class SensorReadingResponse(SensorReadingCreate):
 
     class Config:
         from_attributes = True
+
+@app.post("/readings", response_model=SensorReadingResponse, status_code=201)
+def create_reading(
+    reading: SensorReadingCreate,
+    db: Session = Depends(get_db)
+):
+    # אם מגיע גם heart_rate_bpm – נעדיף אותו אם heart_rate חסר
+    data = reading.model_dump(by_alias=True, exclude_unset=True)
+    if "heart_rate_bpm" in data and "heart_rate" not in data:
+        data["heart_rate"] = data.pop("heart_rate_bpm")
+
+    db_reading = SensorReading(**data)
+    db.add(db_reading)
+    db.commit()
+    db.refresh(db_reading)
+    return db_reading
+
+
+@app.get("/readings/{reading_id}", response_model=SensorReadingResponse)
+def get_reading(reading_id: int, db: Session = Depends(get_db)):
+    reading = db.query(SensorReading).filter(
+        SensorReading.id == reading_id
+    ).first()
+    if not reading:
+        raise HTTPException(status_code=404, detail="Reading not found")
+    return reading
+
+
+@app.get("/")
+def health():
+    return {"status": "ok"}

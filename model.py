@@ -7,6 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Float, JSON, DateTime
 from datetime import datetime
 from dateutil import parser
+from pydantic import BaseModel, Field
 
 DATABASE_URL = "sqlite:///./test2.db"
 
