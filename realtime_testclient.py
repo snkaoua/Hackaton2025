@@ -33,7 +33,7 @@ from pathlib import Path
 
 import websockets   # pip install websockets
 
-DEFAULT_WS_URL = "ws://localhost:8081/v1/realtime"
+DEFAULT_WS_URL = "ws://0.0.0.0/v1/realtime"
 
 # ---------- Helpers ----------------------------------------------------------
 def read_wav_as_pcm16(path: Path) -> bytes:

@@ -144,7 +144,6 @@ proxy = Proxy()
 
 proxy = Proxy()
 
-
 @app.websocket("/v1/realtime")
 async def realtime(ws: WebSocket):
     await proxy.websocket_proxy(ws)

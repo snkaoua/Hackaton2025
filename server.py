@@ -12,15 +12,17 @@ from sqlalchemy.orm import sessionmaker, Session
 from model import *
 from tamar import router as tamar_route
 from model import User, UserCreate, UserResponse, get_db
+from openAI import Proxy as OpenAIProxy
 
 app = FastAPI()
 app.include_router(tamar_route, tags=["events"])
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins
-    allow_credentials=True,
-    allow_methods=["*"],  # Allow all HTTP methods
-    allow_headers=["*"],  # Allow all headers
+    allow_origins=["*"],            # allow browsers from any origin
+    allow_origin_regex=".*",        # also match any Origin header for WebSocket handshakes
+    allow_methods=["*"],            # GET, POST, PUT, DELETE, OPTIONS, etc.
+    allow_headers=["*"],            # any request headers
+    allow_credentials=True,         # send cookies/authifneeded
 )
 app.include_router(tamar_route, tags=["events"])
 
@@ -190,3 +192,14 @@ def get_reading(reading_id: int, db: Session = Depends(get_db)):
 @app.get("/")
 def health():
     return {"status": "ok"}
+
+# === Realtime Audio Proxy WebSocket and Health ===
+proxy = OpenAIProxy()
+
+@app.websocket("/v1/realtime")
+async def realtime_ws(ws: WebSocket):
+    await proxy.websocket_proxy(ws)
+
+@app.get("/health")
+async def health_proxy():
+    return {"mode": "OpenAI" if proxy.use_ai else "local","status":"ok"}
