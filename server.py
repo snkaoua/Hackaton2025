@@ -14,6 +14,7 @@ from tamar import router as tamar_route
 from model import User, UserCreate, UserResponse, get_db
 
 app = FastAPI()
+app.include_router(tamar_route, tags=["events"])
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allow all origins
