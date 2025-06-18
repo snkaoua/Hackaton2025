@@ -30,6 +30,7 @@ import json
 import sys
 import wave
 from pathlib import Path
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 import websockets   # pip install websockets
 

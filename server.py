@@ -13,6 +13,7 @@ from model import *
 from tamar import router as tamar_route
 from model import User, UserCreate, UserResponse, get_db
 from openAI import Proxy as OpenAIProxy
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 app = FastAPI()
 app.include_router(tamar_route, tags=["events"])
