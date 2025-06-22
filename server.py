@@ -22,7 +22,7 @@ from firebase_admin import credentials, messaging
 
 START_TIME = time.time()
 
-cred = credentials.Certificate("serviceAccountKey.json")
+cred = credentials.Certificate("../myphoneapp2025-firebase-adminsdk-fbsvc-af8b6574a1.json")
 firebase_admin.initialize_app(cred)
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
@@ -39,9 +39,15 @@ async def log_requests(request: Request, call_next):
 
     process_time = (time.time() - start_time) * 1000
     content = b""
-    async for chunk in response.body_iterator:
-        content += chunk
-    response.body_iterator = iter([content])
+    if isinstance(body_iter, AsyncIterable):
+        async for chunk in body_iter:
+            content += chunk
+    else:
+        for chunk in body_iter:
+            content += chunk
+
+        # איפוס ה־body_iterator עם התוכן המלא
+        response.body_iterator = iter([content])
 
     log.info(f"↗️  Response: {request.method} {request.url.path} | status={response.status_code} | Time={process_time:.1f}ms | Body={content.decode(errors='ignore')}")
     return response
