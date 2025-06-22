@@ -83,4 +83,43 @@ class SensorReading(Base):
     # שדות מורכבים (סטטוס חיישנים) – נשמר כ-JSON
     sensor_status = Column(JSON, nullable=True)
 
+class AlertData(BaseModel):
+    heart_rate: str
+    stress_level: str
+    status_message: str
+    alert_type: str
+    alert_message: str
+
+class AlertRequest(BaseModel):
+    data: AlertData
+
+@app.post("/send_alert")
+async def send_alert(request: AlertRequest):
+    alert = request.data
+    device_token = request.token
+
+    # 1) לוג ל-console
+    print(f"[ALERT RECEIVED] type={alert.alert_type} message={alert.alert_message}")
+
+    # 2) בניית הודעת FCM
+    # פה נשלח לכל המכשירים שנרשמו לנושא "alerts"
+    message = messaging.Message(
+        notification=messaging.Notification(
+            title=f"Alert: {alert.alert_type.capitalize()}",
+            body=alert.alert_message
+        ),
+        data=alert.dict(),           # שולח גם את כל השדות כ־data payload
+        token=device_token               # או שתשנו ל־token=<DEVICE_TOKEN> אם אתם שולחים למכשיר ספציפי
+    )
+
+    # 3) שליחה ל־FCM
+    try:
+        response = messaging.send(message)
+        return {"success": True, "message_id": response}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"FCM send failed: {e}")
+
 Base.metadata.create_all(bind=engine)
+
+
+

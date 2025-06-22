@@ -31,17 +31,25 @@ import sys
 import wave
 from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+import logging
 
 import websockets   # pip install websockets
 
+# Configure logging to console
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s | %(message)s"
+)
+logger = logging.getLogger(__name__)
 DEFAULT_WS_URL = "ws://0.0.0.0/v1/realtime"
 
-# ---------- Helpers ----------------------------------------------------------
+# ------------------------- Helpers ---------------------------
 def read_wav_as_pcm16(path: Path) -> bytes:
     """Read a mono 16‑bit PCM WAV and return raw bytes."""
     with wave.open(str(path), "rb") as w:
         if w.getnchannels() != 1 or w.getsampwidth() != 2:
             raise ValueError("WAV must be mono 16‑bit PCM")
+        logger.info("Loaded WAV file '%s' (%d bytes)", path, len(data))
         return w.readframes(w.getnframes())
 
 def write_pcm16_as_wav(pcm: bytes, path: Path, sample_rate: int = 16000):
@@ -51,43 +59,61 @@ def write_pcm16_as_wav(pcm: bytes, path: Path, sample_rate: int = 16000):
         w.setsampwidth(2)
         w.setframerate(sample_rate)
         w.writeframes(pcm)
+        logger.info("Wrote WAV file '%s' (%.2f seconds)", path, len(pcm) / 2 / sample_rate)
 
 # ---------- Main client ------------------------------------------------------
 async def audio_to_text(ws, audio_bytes: bytes, txt_path: Path):
+    payload = {"type": "audio", "audio": base64.b64encode(audio_bytes).decode()}
+    logger.info("Sending request to server: %s", payload)
     # 1) send audio buffer
     await ws.send(json.dumps({"type": "audio",
                               "audio": base64.b64encode(audio_bytes).decode()}))
+    # 2) commit & request response
+    commit = {"type": "audio_commit"}
+    logger.info("Sending commit request: %s", commit)
     # 2) commit & request response
     await ws.send(json.dumps({"type": "audio_commit"}))
 
     # 3) collect streamed text
     transcript = []
     async for msg in ws:
+        logger.info("Received raw message: %s", msg)
         evt = json.loads(msg)
+        typ = evt.get("type")
         if evt.get("type") == "text_response":
+            text_chunk = evt.get("text", "")
+            logger.info("Text chunk received: '%s'", text_chunk)
             transcript.append(evt.get("text", ""))
         elif evt.get("type") == "text_response_done":
+            logger.info("End of text response")
             break
 
     txt_path.write_text("".join(transcript), encoding="utf‑8")
-    print(f"✓ Transcript saved to {txt_path}")
+    logger.info("Transcript saved to %s", txt_path)
 
 async def text_to_audio(ws, text_prompt: str, wav_path: Path, sample_rate: int):
     # 1) send text message
-    await ws.send(json.dumps({"type": "text", "text": text_prompt}))
+    payload = {"type": "text", "text": text_prompt}
+    logger.info("Sending request to server: %s", payload)
+    await ws.send(json.dumps(payload))
 
     # 2) collect audio deltas
     pcm_chunks = []
     async for msg in ws:
+        logger.info("Received raw message: %s", msg)
         evt = json.loads(msg)
+        typ = evt.get("type")
         if evt.get("type") == "audio_response":
+            audio_data = base64.b64decode(evt.get("audio"))
+            logger.info("Audio chunk received (%d bytes)", len(audio_data))
             pcm_chunks.append(base64.b64decode(evt.get("audio")))
         elif evt.get("type") == "audio_response_done":
+            logger.info("End of audio response")
             break
 
     pcm_bytes = b"".join(pcm_chunks)
     write_pcm16_as_wav(pcm_bytes, wav_path, sample_rate)
-    print(f"✓ Audio saved to {wav_path} ({len(pcm_bytes)/2/sample_rate:.2f}s)")
+    logger.info("Audio saved to %s", wav_path)
 
 async def main():
     ap = argparse.ArgumentParser(description="Quick tester for OpenAI realtime proxy")
@@ -103,11 +129,16 @@ async def main():
                     help="Sample‑rate for generated WAV (mode=text)")
     args = ap.parse_args()
 
+    logger.info("Connecting to WebSocket URL: %s", args.url)
+
+
     async with websockets.connect(args.url) as ws:
+        logger.info("WebSocket connection established")
         if args.mode == "audio":
             wav_path = Path(args.input)
             if not wav_path.exists():
-                sys.exit(f"Audio file {wav_path} not found")
+                logger.error("Audio file %s not found", wav_path)
+                sys.exit(1)
             audio_bytes = read_wav_as_pcm16(wav_path)
             await audio_to_text(ws, audio_bytes, Path(args.output))
         else:
@@ -117,4 +148,4 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("Interrupted by user")
+        logger.info("Interrupted by user")

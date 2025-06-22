@@ -127,17 +127,28 @@ class Proxy:
     # ---------- OpenAI → client ----------
     async def _from_openai(self, ai_ws, client):
         async for raw in ai_ws:
+            log.debug("← OpenAI → Proxy raw: %s", raw)
             e = json.loads(raw); et = e.get("type")
+            et = e.get("type")
+
             if et == "response.audio.delta":
                 b64 = e.get("delta",{}).get("audio")
-                if b64: await client.send_json({"type":"audio_response","audio":b64})
+                if b64:
+                    log.debug("→ Proxy → Client: audio delta (len=%d)", len(b64))
+                    await client.send_json({"type":"audio_response","audio":b64})
             elif et == "response.audio.done":
+                log.debug("→ Proxy → Client: audio done")
                 await client.send_json({"type":"audio_response_done"})
             elif et == "response.text.delta":
+                text = e.get("delta", "")
+                log.debug("→ Proxy → Client: text delta: %s", text)
                 await client.send_json({"type":"text_response","text":e.get("delta")})
             elif et == "response.text.done":
+                log.debug("→ Proxy → Client: text done")
                 await client.send_json({"type":"text_response_done"})
             elif et == "error":
+                err = e.get("error", {})
+                log.error("Error from OpenAI: %s", err)
                 await client.send_json({"type":"error","error":e.get("error",{})})
 
 proxy = Proxy()
