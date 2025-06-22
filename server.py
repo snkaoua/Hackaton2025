@@ -1,6 +1,6 @@
+import time
 from pathlib import Path
 import shutil
-
 from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,8 +14,38 @@ from tamar import router as tamar_route
 from model import User, UserCreate, UserResponse, get_db
 from openAI import Proxy as OpenAIProxy
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+import logging
+from fastapi.requests import Request
+from fastapi.responses import Response
+import firebase_admin
+from firebase_admin import credentials, messaging
+
+START_TIME = time.time()
+
+cred = credentials.Certificate("serviceAccountKey.json")
+firebase_admin.initialize_app(cred)
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
+log = logging.getLogger("server")
 
 app = FastAPI()
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    body = await request.body()
+    log.info(f"↘️  Request: {request.method} {request.url} | Body: {body.decode(errors='ignore')}")
+
+    response = await call_next(request)
+
+    process_time = (time.time() - start_time) * 1000
+    content = b""
+    async for chunk in response.body_iterator:
+        content += chunk
+    response.body_iterator = iter([content])
+
+    log.info(f"↗️  Response: {request.method} {request.url.path} | status={response.status_code} | Time={process_time:.1f}ms | Body={content.decode(errors='ignore')}")
+    return response
+
 app.include_router(tamar_route, tags=["events"])
 app.add_middleware(
     CORSMiddleware,
@@ -29,21 +59,26 @@ app.include_router(tamar_route, tags=["events"])
 
 @app.post("/users", response_model=UserResponse)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
+    log.info(f"POST /users | Received: {user}")
     db_user = User(name=user.name, email=user.email, user_id=user.user_id)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+    log.info(f"User created in DB: {db_user}")
     return db_user
 
 @app.get("/users", response_model=List[UserResponse])
 def read_users(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
     users = db.query(User).offset(skip).limit(limit).all()
+    log.info(f"GET /users | skip={skip}, limit={limit} → Found: {len(users)} users")
     return users
 
 @app.get("/users/{user_id}", response_model=UserResponse)
 def read_user(user_id: int, db: Session = Depends(get_db)):
+    log.info(f"GET /users/{user_id}")
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
+        log.warning(f"User {user_id} not found")
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
@@ -172,13 +207,32 @@ def create_reading(
     data = reading.model_dump(by_alias=True, exclude_unset=True)
     if "heart_rate_bpm" in data and "heart_rate" not in data:
         data["heart_rate"] = data.pop("heart_rate_bpm")
+        log.info(
+            f"[📡 SENSOR] user_id={data.get('user_id')} | heart_rate={data.get('heart_rate')} | stress_level={data.get('stress_level')}")
 
     db_reading = SensorReading(**data)
     db.add(db_reading)
     db.commit()
     db.refresh(db_reading)
+    log.info(f"[🧠 DB] Saved SensorReading: id={db_reading.id} | time={db_reading.timestamp}")
     return db_reading
 
+class AlertRequest(BaseModel):
+    token: str
+    title: str
+    body: str
+    data: dict | None = None
+
+
+@app.post("/send-alert")
+async def send_alert(req: AlertRequest):
+    message_id = send_fcm_notification(
+        token=req.token,
+        title=req.title,
+        body=req.body,
+        data=req.data,
+    )
+    return {"success": True, "message_id": message_id}
 
 @app.get("/readings/{reading_id}", response_model=SensorReadingResponse)
 def get_reading(reading_id: int, db: Session = Depends(get_db)):
@@ -204,3 +258,27 @@ async def realtime_ws(ws: WebSocket):
 @app.get("/health")
 async def health_proxy():
     return {"mode": "OpenAI" if proxy.use_ai else "local","status":"ok"}
+
+
+def send_fcm_notification(token: str, title: str, body: str, data: dict | None = None) -> str:
+    """
+    שולחת הודעת פוש ל־FCM.
+    מחזירה את message_id של FCM.
+    """
+    message = messaging.Message(
+        notification=messaging.Notification(title=title, body=body),
+        data=data or {},
+        token=token,
+    )
+    return messaging.send(message)
+
+
+@app.get("/health", tags=["Health"])
+async def health_check():
+    """
+    Health check endpoint – מחזיר OK אם השרת חי.
+    """
+    return {
+        "status": "ok",
+        "uptime_ms": int((time.time() - START_TIME) * 1000)
+    }
