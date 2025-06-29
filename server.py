@@ -19,6 +19,9 @@ from fastapi.requests import Request
 from fastapi.responses import Response
 import firebase_admin
 from firebase_admin import credentials, messaging
+from model import router as model_router
+
+app.include_router(model_router, tags=["alerts"])
 
 START_TIME = time.time()
 
