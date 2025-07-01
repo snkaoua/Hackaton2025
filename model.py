@@ -8,6 +8,8 @@ from sqlalchemy import Float, JSON, DateTime
 from datetime import datetime
 from dateutil import parser
 from pydantic import BaseModel, Field
+from fastapi import APIRouter
+from firebase_admin import messaging
 
 DATABASE_URL = "sqlite:///./test2.db"
 
@@ -15,6 +17,9 @@ engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
+# create a router
+router = APIRouter()
 
 class User(Base):
     __tablename__ = "users"
@@ -80,7 +85,7 @@ class SensorReading(Base):
     alert_level   = Column(String, nullable=True)     # "ELEVATED"
     stress_level  = Column(String, nullable=True)     # "low"
 
-    # שדות מורכבים (סטטוס חיישנים) – נשמר כ-JSON
+    # additional indicators
     sensor_status = Column(JSON, nullable=True)
 
 class AlertData(BaseModel):
@@ -91,9 +96,13 @@ class AlertData(BaseModel):
     alert_message: str
 
 class AlertRequest(BaseModel):
+    #The token is used to authenticate the request
+    token: str
+    # The data contains the alert information
     data: AlertData
 
-@app.post("/send_alert")
+
+@router.post("/send_alert")
 async def send_alert(request: AlertRequest):
     alert = request.data
     device_token = request.token
