@@ -4,19 +4,14 @@ from pathlib import Path
 import shutil
 from datetime import datetime
 from typing import List, Optional, AsyncIterable
-
+import firebase_admin
 from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, WebSocket, WebSocketDisconnect, Request
 from fastapi.responses import FileResponse, Response
 from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session, sessionmaker
 
-from model import (
-    router       as model_router,
-    User, UserCreate, UserResponse, get_db,
-    SensorReading, SensorReadingCreate, SensorReadingResponse,
-    send_fcm_notification
-)
+from model import *
 from model import router as alert_router
 from tamar import router as tamar_route
 from openAI import Proxy as OpenAIProxy
@@ -28,13 +23,8 @@ app = FastAPI()
 logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
 log = logging.getLogger("server")
 
-app.include_router(model_router, tags=["alerts"])
-app.include_router(alert_router, prefix="")
-
+app.include_router(alert_router, tags=["alerts"])
 START_TIME = time.time()
-
-cred = credentials.Certificate("../myphoneapp2025-firebase-adminsdk-fbsvc-af8b6574a1.json")
-firebase_admin.initialize_app(cred)
 
 @app.on_event("startup")
 def startup_event():

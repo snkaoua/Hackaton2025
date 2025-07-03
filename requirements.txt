@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+websockets
+edge-tts
+SpeechRecognition
+pipwin
+firebase_admin
+sqlalchemy.orm
+pydantic
+datetime
+typing

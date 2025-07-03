@@ -5,11 +5,11 @@ from firebase_admin import credentials, db
 from datetime import datetime
 
 # Load the service account credentials from JSON file
-cred = credentials.Certificate("path/to/firebase-service-account.json")
+cred = credentials.Certificate("../myphoneapp2025-firebase-adminsdk-fbsvc-6b9cc6a64c.json")
 
 # Initialize the Firebase app with the Realtime Database URL
 firebase_admin.initialize_app(cred, {
-    "databaseURL": "https://<MyPhoneApp2025>.firebaseio.com"
+    "databaseURL": "https://myphoneapp2025-default-rtdb.firebaseio.com/"
 })
 
 def get_db_reference(path: str):

@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+
+myphoneapp2025-firebase-adminsdk-fbsvc-6b9cc6a64c.json
+serviceAccountKey.json
 # C extensions
 *.so
 *.db
@@ -193,3 +196,4 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+myphoneapp2025-firebase-adminsdk-*.json

@@ -1,6 +1,0 @@
-fastapi
-uvicorn
-websockets
-edge-tts
-SpeechRecognition
-pipwin ; extra == "pyaudio"   # Windows only

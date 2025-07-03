@@ -6,7 +6,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Float, JSON, DateTime
 from datetime import datetime
-from dateutil import parser
 from pydantic import BaseModel, Field
 from fastapi import APIRouter
 from firebase_admin import messaging
