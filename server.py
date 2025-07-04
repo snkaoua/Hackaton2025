@@ -61,38 +61,38 @@ def create_operation(op_id: str, payload: dict):
     return {"id": op_id, "stored": ref.get()}
 
 @app.middleware("http")
-async def log_requests(request: Request, call_next):
-    log.info(f"↘️  Incoming Request → {request.method} {request.url}")
-    start_time = time.time()
-    log.debug("Recorded start time")
-    body = await request.body()
-    log.info(f"↘️  Request: {request.method} {request.url} | Body: {body.decode(errors='ignore')}")
-
-    log.info("Calling next handler in middleware chain")
-    response = await call_next(request)
-    log.info("Received Response object from call_next")
-
-    process_time = (time.time() - start_time) * 1000
-    log.debug(f"Processing time (ms): {process_time:.1f}")
-
-    content = b""
-    if isinstance(body_iter, AsyncIterable):
-        log.debug("body_iterator is AsyncIterable, reading chunks async")
-        async for chunk in body_iter:
-            content += chunk
-            log.debug(f"Read {len(content)} bytes asynchronously")
-    else:
-        log.debug("body_iterator is sync iterable, reading chunks")
-        for chunk in body_iter:
-            content += chunk
-            log.debug(f"Read {len(content)} bytes synchronously")
-
-        # איפוס ה־body_iterator עם התוכן המלא
-        response.body_iterator = iter([content])
-        log.info(f"↗️  Response Body (length={len(content)}): {content.decode(errors='ignore')}")
-
-    log.info(f"↗️  Response: {request.method} {request.url.path} | status={response.status_code} | Time={process_time:.1f}ms | Body={content.decode(errors='ignore')}")
-    return response
+# async def log_requests(request: Request, call_next):
+#     log.info(f"↘️  Incoming Request → {request.method} {request.url}")
+#     start_time = time.time()
+#     log.debug("Recorded start time")
+#     body = await request.body()
+#     log.info(f"↘️  Request: {request.method} {request.url} | Body: {body.decode(errors='ignore')}")
+#
+#     log.info("Calling next handler in middleware chain")
+#     response = await call_next(request)
+#     log.info("Received Response object from call_next")
+#
+#     process_time = (time.time() - start_time) * 1000
+#     log.debug(f"Processing time (ms): {process_time:.1f}")
+#
+#     content = b""
+#     if isinstance(body_iter, AsyncIterable):
+#         log.debug("body_iterator is AsyncIterable, reading chunks async")
+#         async for chunk in body_iter:
+#             content += chunk
+#             log.debug(f"Read {len(content)} bytes asynchronously")
+#     else:
+#         log.debug("body_iterator is sync iterable, reading chunks")
+#         for chunk in body_iter:
+#             content += chunk
+#             log.debug(f"Read {len(content)} bytes synchronously")
+#
+#         # איפוס ה־body_iterator עם התוכן המלא
+#         response.body_iterator = iter([content])
+#         log.info(f"↗️  Response Body (length={len(content)}): {content.decode(errors='ignore')}")
+#
+#     log.info(f"↗️  Response: {request.method} {request.url.path} | status={response.status_code} | Time={process_time:.1f}ms | Body={content.decode(errors='ignore')}")
+#     return response
 
 log.info("Registering router tamar_route with tags ['events']")
 app.include_router(tamar_route, tags=["events"])
