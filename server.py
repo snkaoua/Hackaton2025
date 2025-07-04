@@ -424,7 +424,7 @@ async def realtime_ws(ws: WebSocket):
 @app.get("/health")
 async def health_proxy():
     log.info("GET /health → proxy health check")
-    log.info(f"GET /health → proxy response: {result}")
+    # log.info(f"GET /health → proxy response: {result}")
     return {"mode": "OpenAI" if proxy.use_ai else "local","status":"ok"}
 
 
