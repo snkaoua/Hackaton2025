@@ -231,12 +231,12 @@ UPLOAD_DIRECTORY.mkdir(parents=True, exist_ok=True)
 log.info(f"Upload directory ready: {UPLOAD_DIRECTORY}")
 
 
-@app.get("/")
-async def root():
-    log.info("GET / called")
-
-    log.debug(f"Response payload: {message}")
-    return {"message": "Welcome to FastAPI example!"}
+# @app.get("/")
+# async def root():
+#     log.info("GET / called")
+#
+#     log.debug(f"Response payload: {message}")
+#     return {"message": "Welcome to FastAPI example!"}
 
 
 @app.post("/uploadfile")
