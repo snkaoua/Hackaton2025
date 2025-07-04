@@ -60,7 +60,7 @@ def create_operation(op_id: str, payload: dict):
     # Retrieve stored entry for confirmation
     return {"id": op_id, "stored": ref.get()}
 
-@app.middleware("http")
+# @app.middleware("http")
 # async def log_requests(request: Request, call_next):
 #     log.info(f"↘️  Incoming Request → {request.method} {request.url}")
 #     start_time = time.time()
